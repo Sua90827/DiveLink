@@ -38,7 +38,8 @@
 
 ## 🗂 ERD
 
-<img width="1381" height="1551" alt="Dive Link drawio (2)" src="https://github.com/user-attachments/assets/2b638676-b4b3-4bfd-b1a0-a9bef50aa834" />
+<img width="1912" height="1561" alt="DiveLink drawio (4)" src="https://github.com/user-attachments/assets/2c1f6303-ec7e-451d-ad14-d98c44244440" />
+
 
 
 ---
