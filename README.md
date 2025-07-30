@@ -34,13 +34,14 @@
 - 자유롭게 공지글 작성 가능 (사진 업로드 포함)
 - 사용자들이 참석 신청 가능
 
+### 6. 관리자 모듈
+- 장비 종류, 수량, 가격 변경 가능(변경 시점 이후에 작성하는 연습 공지글에서 해당 변경건 적용 시작)
+- 주별, 월별, 입금 상태별 대여료 현황 파악 기능
 ---
 
 ## 🗂 ERD
 
-<img width="1912" height="1561" alt="DiveLink drawio (4)" src="https://github.com/user-attachments/assets/2c1f6303-ec7e-451d-ad14-d98c44244440" />
-
-
+<img width="1912" height="1562" alt="DiveLink drawio (5)" src="https://github.com/user-attachments/assets/98c50c5e-0a05-4f73-b891-e0da1d16b12c" />
 
 ---
 
