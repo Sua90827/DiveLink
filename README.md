@@ -60,7 +60,7 @@
 
 #### 🧾 장비 대여 정보
 - 신청한 장비 및 가격 저장
-- PracticeApplicationEquipment 테이블에 개별 저장
+- practice_application_gear 테이블에 개별 저장
 - 연습별 장비 대여 내역 확인
 
 #### 🌊 다이빙 로그
@@ -81,7 +81,7 @@
 
 #### 📦 재고 확인
 - 공지의 장비 세트 기준으로 신청된 장비 수량 집계
-- practice_notice의 equipment_set.id와 연결된 Equipment.quantity 를 practice_application_equipment와 비교하여 초과 여부 판단
+- practice_notice의 gear_set.id와 연결된 gear.quantity 를 practice_application_gear와 비교하여 초과 여부 판단
 
 #### 💰 대여료 계산
 - 납부 방식별 계산 분기:
