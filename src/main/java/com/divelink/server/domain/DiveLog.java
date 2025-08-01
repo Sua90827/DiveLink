@@ -30,16 +30,15 @@ public class DiveLog {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  private Long userId;
+  private String userId;
 
   private Integer divingNo;
   private LocalDate date;
   private LocalTime time;
-
   private String location;
   private String suit;
-
   private Float weight;
+
   private Float fim;
   private Float cwt;
   private Float dyn;
@@ -49,16 +48,9 @@ public class DiveLog {
   @Lob
   private String content;
 
-  @Enumerated(EnumType.STRING)
-  private Visibility visibility;
-
   private LocalDateTime createdAt;
 
   @Lob
   private String comment;
-
-  public enum Visibility {
-    PRIVATE, BUDDY_ONLY, PUBLIC
-  }
 
 }

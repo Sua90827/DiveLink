@@ -1,5 +1,6 @@
 package com.divelink.server.controller;
 
+import com.divelink.server.config.JwtTokenProvider;
 import com.divelink.server.dto.UserLoginRequest;
 import com.divelink.server.dto.UserRegisterRequest;
 import com.divelink.server.service.UserService;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
   private final UserService userService;
+  private final JwtTokenProvider jwtTokenProvider;
 
   @PostMapping("/register")
   public ResponseEntity<String> register(@RequestBody @Valid UserRegisterRequest request){
@@ -30,14 +32,11 @@ public class UserController {
   }
 
   @PostMapping("/login")
-  public ResponseEntity<String> login(@RequestBody @Valid UserLoginRequest request, HttpServletRequest httpRequest){
-    String result;
-
+  public ResponseEntity<String> login(@RequestBody @Valid UserLoginRequest request){
     boolean passed = userService.login(request.getUserId(), request.getPassword());
     if (passed) {
-      HttpSession session = httpRequest.getSession(true);
-      session.setAttribute("USER_ID", request.getUserId());
-      return ResponseEntity.ok("로그인 완료");
+      String token = jwtTokenProvider.generateToken(request.getUserId());
+      return ResponseEntity.ok("로그인 성공. JWT: " + token);
     } else {
       return ResponseEntity.status(401).body("로그인 실패");
     }

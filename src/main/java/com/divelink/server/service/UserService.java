@@ -3,7 +3,6 @@ package com.divelink.server.service;
 import com.divelink.server.domain.User;
 import com.divelink.server.repository.UserRepository;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
