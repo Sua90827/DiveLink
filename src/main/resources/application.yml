@@ -1,0 +1,31 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:mariadb://localhost:3306/divelink
+    username: root
+    password: ${DB_PASSWORD}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # 개발 중에는 update, 배포 전에는 validate
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+  security:
+    user:
+      enabled: false  # 기본 사용자 인증 비활성화
+
+#  jwt:
+#    expiration_time: 86400000 #1일
+#    secret:
+
+server:
+  port: 8080
