@@ -3,6 +3,7 @@ package com.divelink.server.controller;
 import com.divelink.server.dto.DiveLogRequest;
 import com.divelink.server.service.DiveLogService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,13 +19,11 @@ public class DiveLogController {
 
   @PostMapping("write")
   public ResponseEntity<String> writeLog(@RequestBody DiveLogRequest request){
-    String result;
-    String saved = diveLogService.saveLog(request);
-    if(saved.equals("s")){
-      result = "저장 성공";
-    }else{
-      result = "저장 실패. " + saved;
+    try{
+      diveLogService.saveLog(request);
+      return ResponseEntity.status(HttpStatus.CREATED).body("저장 성공");
+    }catch(Exception e){
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("저장 실패" + e.getMessage());
     }
-    return ResponseEntity.ok(result);
   }
 }
