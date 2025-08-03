@@ -45,6 +45,7 @@ public class UserController {
       if(loginSuccess){
         String token = jwtTokenProvider.generateToken(request.getUserId());
         session.setAttribute("USER_ID", request.getUserId());
+        session.setAttribute("USER_ROLE", userService.getUserRole(request.getUserId()));
         return ResponseEntity.ok("로그인 성공. JWT: " + token);
       }else{
         //아이디/비번 불일치 등
@@ -64,8 +65,9 @@ public class UserController {
   @GetMapping("/session")
   private ResponseEntity<String> checkSession(HttpSession session){
     String userId = (String) session.getAttribute("USER_ID");
+    String role = (String) session.getAttribute("USER_ROLE");
     if(userId != null){
-      return ResponseEntity.ok("세션 있음 userId: " + userId);
+      return ResponseEntity.ok("세션 있음 userId: " + userId + " user_role: " + role);
     }else{
       return ResponseEntity.ok("세션 없음");
     }

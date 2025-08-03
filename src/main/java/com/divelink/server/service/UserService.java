@@ -2,6 +2,7 @@ package com.divelink.server.service;
 
 import com.divelink.server.domain.User;
 import com.divelink.server.repository.UserRepository;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +42,9 @@ public class UserService {
     return userRepository.findByUserId(id)
         .map(user -> passwordEncoder.matches(password, user.getPassword()))
         .orElse(false);
+  }
+
+  public String getUserRole(String userId) {
+    return userRepository.findRoleByUserId(userId);
   }
 }

@@ -25,5 +25,5 @@ public class DiveLogRequest {
 
   private String content; // 다이빙 내용
 
-  private String comment; // 다이빙 코멘트
+//  private String comment; // 다이빙 코멘트
 }
