@@ -1,11 +1,10 @@
 package com.divelink.server.service;
 
 import com.divelink.server.domain.DiveLog;
-import com.divelink.server.dto.DiveLogCommentRequest;
 import com.divelink.server.dto.DiveLogRequest;
 import com.divelink.server.repository.DiveLogRepository;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,8 +38,8 @@ public class DiveLogService {
     }
   }
 
-  public List<DiveLog> getDiveLogList(String userId) {
-    return diveLogRepository.findAllByUserId(userId);
+  public Page<DiveLog> getDiveLogList(String userId, Pageable pageable) {
+    return diveLogRepository.findAllByUserId(userId, pageable);
   }
 
   public DiveLog getDiveLog(String userId, Long id) {

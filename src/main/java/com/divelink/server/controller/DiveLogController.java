@@ -1,20 +1,23 @@
 package com.divelink.server.controller;
 
+import static org.springframework.data.domain.Sort.Direction.DESC;
+
+import com.divelink.server.context.UserContext;
 import com.divelink.server.domain.DiveLog;
 import com.divelink.server.dto.DiveLogCommentRequest;
 import com.divelink.server.dto.DiveLogRequest;
 import com.divelink.server.service.DiveLogService;
-import jakarta.servlet.http.HttpSession;
-import java.util.List;
-import javax.swing.Spring;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.graphql.GraphQlProperties.Http;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,13 +30,18 @@ public class DiveLogController {
 
   private final DiveLogService diveLogService;
 
-  @PostMapping("write")
-  public ResponseEntity<String> writeLog(@RequestBody DiveLogRequest request, HttpSession session){
+  private boolean isAdmin() {
+    return "ADMIN".equals(UserContext.getUserRole());
+  }
+
+  // 다이빙 로그 작성
+  @PostMapping
+  public ResponseEntity<String> writeLog(@RequestBody DiveLogRequest request){
     try{
-      if(session.getAttribute("USER_ID") == null || !session.getAttribute("USER_ID").equals(request.getUserId())){
+      String userId = UserContext.getUserId();
+      if(!userId.equals(request.getUserId())){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
-      String userId = (String) session.getAttribute("USER_ID");
       diveLogService.saveLog(request, userId);
       return ResponseEntity.status(HttpStatus.CREATED).body("저장 성공");
     }catch(Exception e){
@@ -41,26 +49,24 @@ public class DiveLogController {
     }
   }
 
-  @GetMapping("read-list")
-  public ResponseEntity<List<DiveLog>> diveLogList(HttpSession session){
-
+  // 사용자 본인 로그 목록 조회
+  @GetMapping
+  public ResponseEntity<Page<DiveLog>> diveLogList(@PageableDefault(size = 10, sort = "createdAt", direction = DESC) Pageable pageable){
     try{
-      String userId = (String)session.getAttribute("USER_ID");
-      List<DiveLog> diveLogList = diveLogService.getDiveLogList(userId);
-      return ResponseEntity.ok(diveLogList);
+      String userId = UserContext.getUserId();
+      Page<DiveLog> diveLogs = diveLogService.getDiveLogList(userId, pageable);
+      return ResponseEntity.ok(diveLogs);
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
 
-  @GetMapping("user-read-detail")
-  public ResponseEntity<DiveLog> userDiveLog(@RequestParam Long id, HttpSession session){
+  //사용자 본인 특정 로그 조회
+  @GetMapping("/{id}")
+  public ResponseEntity<DiveLog> userDiveLog(@PathVariable Long id){
 
     try {
-      String userId = (String) session.getAttribute("USER_ID");
-      if (userId == null) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-      }
+      String userId = UserContext.getUserId();
       DiveLog diveLog = diveLogService.getDiveLog(userId, id);
       return ResponseEntity.ok(diveLog);
     }catch (IllegalArgumentException e){
@@ -70,13 +76,11 @@ public class DiveLogController {
     }
   }
 
-  @PostMapping("modify-log")
-  public ResponseEntity<String> modifyLog (@RequestBody DiveLogRequest request, @RequestParam Long id, HttpSession session){
+  //사용자 본인 로그 수정
+  @PutMapping("/{id}")
+  public ResponseEntity<String> modifyLog (@RequestBody DiveLogRequest request, @PathVariable Long id){
     try{
-      if(session.getAttribute("USER_ID") == null){
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-      }
-      String userId = (String) session.getAttribute("USER_ID");
+      String userId = UserContext.getUserId();
       diveLogService.modifyDiveLog(request, id, userId);
       return ResponseEntity.ok("수정 성공");
     } catch (Exception e) {
@@ -85,23 +89,24 @@ public class DiveLogController {
   }
 
   //관리자가 특정 사용자의 다이빙 로그를 조회하는 API (comment 포함)
-  @GetMapping("admin-read-list")
-  public ResponseEntity<List<DiveLog>> diveLogList(@RequestParam String userId, HttpSession session){
+  @GetMapping("/admin")
+  public ResponseEntity<Page<DiveLog>> adminDiveLogList(@RequestParam String userId,
+      @PageableDefault(size = 10, sort = "createdAt", direction = DESC) Pageable pageable){
     try{
-      if(session.getAttribute("USER_ID") == null || !session.getAttribute("USER_ROLE").equals("ADMIN")){
+      if(!isAdmin()){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
-      return ResponseEntity.ok(diveLogService.getDiveLogList(userId));
+      return ResponseEntity.ok(diveLogService.getDiveLogList(userId, pageable));
 
     }catch (Exception e){
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
   }
   //관리자가 특정 id의 다이빙 로그를 조회하는 API (comment 포함)
-  @GetMapping("admin-read-log")
-  public ResponseEntity<DiveLog> adminDiveLog(@RequestParam Long id, HttpSession session){
+  @GetMapping("/admin/{id}")
+  public ResponseEntity<DiveLog> adminDiveLog(@PathVariable Long id){
     try {
-      if (session.getAttribute("USER_ID") == null || !session.getAttribute("USER_ROLE").equals("ADMIN")) {
+      if(!isAdmin()){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
       }
       DiveLog diveLog = diveLogService.getDiveLogByAdmin(id);
@@ -113,10 +118,11 @@ public class DiveLogController {
     }
   }
 
-  @PostMapping("write-comment")
-  public ResponseEntity<String> writeComment(@RequestParam Long id, @RequestBody DiveLogCommentRequest comment, HttpSession session){
+  //관리자 코멘트 작성
+  @PostMapping("/{id}/comments")
+  public ResponseEntity<String> writeComment(@PathVariable Long id, @RequestBody DiveLogCommentRequest comment){
     try{
-      if(session.getAttribute("USER_ID") == null || !session.getAttribute("USER_ROLE").equals("ADMIN")){
+      if(!isAdmin()){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("권한 문제");
       }
       diveLogService.saveComment(id, comment.getComment());
@@ -126,10 +132,11 @@ public class DiveLogController {
     }
   }
 
-  @PostMapping("modify-comment")
-  public ResponseEntity<String> modifyComment(@RequestParam Long id, @RequestBody DiveLogCommentRequest comment, HttpSession session){
+  //관리자 코멘트 수정
+  @PutMapping("/comments/{id}")
+  public ResponseEntity<String> modifyComment(@PathVariable Long id, @RequestBody DiveLogCommentRequest comment){
     try{
-      if(session.getAttribute("USER_ID") == null || !session.getAttribute("USER_ROLE").equals("ADMIN")){
+      if(!isAdmin()){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("권한 문제");
       }
       diveLogService.saveComment(id, comment.getComment());
@@ -139,10 +146,11 @@ public class DiveLogController {
     }
   }
 
-  @DeleteMapping("delete-comment")
-  public ResponseEntity<String> deleteComment(@RequestParam Long id, HttpSession session){
+  //관리자 코멘트 삭제
+  @DeleteMapping("/comments/{id}")
+  public ResponseEntity<String> deleteComment(@PathVariable Long id){
     try{
-      if(session.getAttribute("USER_ID") == null || !"ADMIN".equals(session.getAttribute("USER_ROLE"))){
+      if(!isAdmin()){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("권한 문제");
       }
       diveLogService.deleteComment(id);

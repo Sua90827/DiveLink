@@ -45,6 +45,8 @@ public class UserService {
   }
 
   public String getUserRole(String userId) {
-    return userRepository.findRoleByUserId(userId);
+    return userRepository.findByUserId(userId)
+        .map(user -> user.getRole().name())
+        .orElseThrow(()-> new IllegalArgumentException("존재하지 않는 유저"));
   }
 }
