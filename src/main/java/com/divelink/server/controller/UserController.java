@@ -1,5 +1,6 @@
 package com.divelink.server.controller;
 
+import static com.divelink.server.constant.SessionConst.*;
 import com.divelink.server.config.JwtTokenProvider;
 import com.divelink.server.dto.UserLoginRequest;
 import com.divelink.server.dto.UserRegisterRequest;
@@ -43,8 +44,9 @@ public class UserController {
       boolean loginSuccess = userService.login(request.getUserId(), request.getPassword());
 
       if(loginSuccess){
-        String token = jwtTokenProvider.generateToken(request.getUserId());
-        session.setAttribute("USER_ID", request.getUserId());
+        String token = jwtTokenProvider.generateToken(request.getUserId(), userService.getUserRole(request.getUserId()));
+        session.setAttribute(USER_ID, request.getUserId());
+        session.setAttribute(USER_ROLE, userService.getUserRole(request.getUserId()));
         return ResponseEntity.ok("로그인 성공. JWT: " + token);
       }else{
         //아이디/비번 불일치 등
@@ -63,9 +65,10 @@ public class UserController {
 
   @GetMapping("/session")
   private ResponseEntity<String> checkSession(HttpSession session){
-    String userId = (String) session.getAttribute("USER_ID");
+    String userId = (String) session.getAttribute(USER_ID);
+    String role = (String) session.getAttribute(USER_ROLE);
     if(userId != null){
-      return ResponseEntity.ok("세션 있음 userId: " + userId);
+      return ResponseEntity.ok("세션 있음 userId: " + userId + " user_role: " + role);
     }else{
       return ResponseEntity.ok("세션 없음");
     }

@@ -12,9 +12,10 @@ public class JwtTokenProvider {
   private final String SECRET_KEY = "mySuperSecretKeyThatIsAtLeast512BitsLongAndMoreSecureThanBeforemySuperSecretKeyThatIsAtLeast512BitsLongAndMoreSecureThanBefore";
 
   // JWT 토큰 생성
-  public String generateToken(String userId) {
+  public String generateToken(String userId, String userRole) {
     return Jwts.builder()
         .setSubject(userId) // 사용자 정보
+        .claim("role", userRole) //userRole도 추가
         .setIssuedAt(new Date()) // 토큰 발급 시간
         .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 만료 시간 1일
         .signWith(SignatureAlgorithm.HS512, SECRET_KEY) // 서명
@@ -38,5 +39,13 @@ public class JwtTokenProvider {
         .parseClaimsJws(token)
         .getBody()
         .getSubject();
+  }
+
+  public String getUserRoleFromToken(String token) {
+    return Jwts.parser()
+        .setSigningKey(SECRET_KEY)
+        .parseClaimsJws(token)
+        .getBody()
+        .get("role", String.class);
   }
 }

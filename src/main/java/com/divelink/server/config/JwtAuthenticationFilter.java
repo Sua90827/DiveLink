@@ -1,5 +1,6 @@
 package com.divelink.server.config;
 
+import com.divelink.server.context.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,13 +31,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       log.info("JWT Token: {}", token);
     }
 
-    if (token != null && jwtTokenProvider.validateToken(token)) {
-      String userId = jwtTokenProvider.getUserIdFromToken(token);
-      UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, null);
-      SecurityContextHolder.getContext().setAuthentication(authentication);
-    }
+    try{
 
-    filterChain.doFilter(request, response);
+
+      if (token != null && jwtTokenProvider.validateToken(token)) {
+        String userId = jwtTokenProvider.getUserIdFromToken(token);
+        String userRole = jwtTokenProvider.getUserRoleFromToken(token);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, null);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        //UserContext 설정
+        UserContext.setUserId(userId);
+        UserContext.setUserRole(userRole);
+      }
+      filterChain.doFilter(request, response);
+    }finally {
+      UserContext.clear();//요청 끝날 때 UserContext 초기화 - 메모리 누수 방지
+    }
   }
 
   // 요청에서 JWT 토큰을 추출하는 메소드
