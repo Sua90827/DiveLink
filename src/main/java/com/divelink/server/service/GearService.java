@@ -51,51 +51,24 @@ public class GearService {
 
       //3. GearSetMapping 저장
       GearSetMapping mapping = GearSetMapping.builder()
-          .gearSetId(set.getId())
-          .gearId(gear.getId())
+          .gearSet(set)
+          .gear(gear)
           .build();
       gearSetMappingRepository.save(mapping);
     }
   }
 
   public List<GearSetWithGearListResponse> getGearList(String userId, Pageable pageable) {
-    //GearSet 목록 조회
-    List<GearSet> setList = gearSetRepository.findAllByCreatedByOrderByCreatedAtDesc(userId, pageable);
 
-    //GearSet Id 목록 추출
-    List<Long> setIds = setList.stream()
-        .map(GearSet::getId)
+    List<GearSet> setList = gearSetRepository.findWithMappingsAndGearsByCreatedBy(userId, pageable);
+
+    return setList.stream()
+        .map(set -> {
+          List<GearResponse> gearResponses = set.getMappings().stream()
+              .map(mapping -> new GearResponse(mapping.getGear()))
+              .toList();
+          return new GearSetWithGearListResponse(set.getId(), gearResponses);
+        })
         .toList();
-
-    //매핑정보 가져오기
-    List<GearSetMapping> setMappingList = gearSetMappingRepository.findAllByGearSetIdIn(setIds);
-
-    //Gear Id 목록 추출
-    List<Long> gearIds = setMappingList.stream()
-        .map(GearSetMapping::getGearId)
-        .toList();
-
-    //Gear 한번에 조회
-    List<Gear> gears = gearRepository.findAllById(gearIds);
-    Map<Long, Gear> gearMap = gears.stream()
-        .collect(Collectors.toMap(Gear::getId, g->g));
-
-    //setId -> List<GearResponse> 매핑
-    Map<Long, List<GearResponse>> setToGears = new HashMap<>();
-    for(GearSetMapping mapping : setMappingList){
-      Long setId = mapping.getGearSetId();
-      Gear gear = gearMap.get(mapping.getGearId());
-      GearResponse gearResponse = new GearResponse(gear);
-      setToGears.computeIfAbsent(setId, k -> new ArrayList<>()).add(gearResponse);
-    }
-
-    //최종 결과 변환
-    List<GearSetWithGearListResponse> result = new ArrayList<>();
-    for (GearSet set : setList){
-      Long setId = set.getId();
-      List<GearResponse> gearResponses = setToGears.getOrDefault(setId, List.of());
-      result.add(new GearSetWithGearListResponse(setId, gearResponses));
-    }
-    return result;
   }
 }

@@ -1,11 +1,15 @@
 package com.divelink.server.domain;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,4 +36,7 @@ public class GearSet {
 
   @Column(nullable = false)
   private String createdBy;
+
+  @OneToMany(mappedBy = "gearSet", cascade = CascadeType.ALL)
+  private List<GearSetMapping> mappings = new ArrayList<>();
 }
