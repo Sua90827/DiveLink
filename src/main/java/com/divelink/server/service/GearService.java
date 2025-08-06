@@ -61,16 +61,20 @@ public class GearService {
   public List<GearSetWithGearListResponse> getGearList(String userId, Pageable pageable) {
     //GearSet 목록 조회
     List<GearSet> setList = gearSetRepository.findAllByCreatedByOrderByCreatedAtDesc(userId, pageable);
+
     //GearSet Id 목록 추출
     List<Long> setIds = setList.stream()
         .map(GearSet::getId)
         .toList();
+
     //매핑정보 가져오기
     List<GearSetMapping> setMappingList = gearSetMappingRepository.findAllByGearSetIdIn(setIds);
+
     //Gear Id 목록 추출
     List<Long> gearIds = setMappingList.stream()
         .map(GearSetMapping::getGearId)
         .toList();
+
     //Gear 한번에 조회
     List<Gear> gears = gearRepository.findAllById(gearIds);
     Map<Long, Gear> gearMap = gears.stream()
@@ -85,7 +89,7 @@ public class GearService {
       setToGears.computeIfAbsent(setId, k -> new ArrayList<>()).add(gearResponse);
     }
 
-    // 6. 최종 결과 변환
+    //최종 결과 변환
     List<GearSetWithGearListResponse> result = new ArrayList<>();
     for (GearSet set : setList){
       Long setId = set.getId();

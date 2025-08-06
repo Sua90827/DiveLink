@@ -43,6 +43,9 @@ public class GearController {
   //장비 리스트 조회
   @GetMapping
   public ResponseEntity<List<GearSetWithGearListResponse>> getGear(@PageableDefault(size = 5, sort = "createdAt", direction = DESC) Pageable pageable){
+    if (!isAdmin()) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
     String userId = UserContext.getUserId();
     List<GearSetWithGearListResponse> list = gearService.getGearList(userId, pageable);
     return ResponseEntity.ok(list);
