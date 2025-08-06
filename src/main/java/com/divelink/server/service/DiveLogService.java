@@ -15,27 +15,23 @@ public class DiveLogService {
 
   private final DiveLogRepository diveLogRepository;
 
-  public void saveLog(DiveLogRequest request, String userId) throws Exception{
-    try{
-      DiveLog diveLog = DiveLog.builder()
-          .userId(request.getUserId())
-          .divingNo(request.getDivingNo())
-          .date(request.getDate())
-          .time(request.getTime())
-          .location(request.getLocation())
-          .suit(request.getSuit())
-          .weight(request.getWeight())
-          .fim(request.getFim())
-          .cwt(request.getCwt())
-          .dyn(request.getDyn())
-          .longestDivingTime(request.getLongestDivingTime())
-          .content(request.getContent())
-          .build();
+  public void saveLog(DiveLogRequest request, String userId) {
+    DiveLog diveLog = DiveLog.builder()
+        .userId(request.getUserId())
+        .divingNo(request.getDivingNo())
+        .date(request.getDate())
+        .time(request.getTime())
+        .location(request.getLocation())
+        .suit(request.getSuit())
+        .weight(request.getWeight())
+        .fim(request.getFim())
+        .cwt(request.getCwt())
+        .dyn(request.getDyn())
+        .longestDivingTime(request.getLongestDivingTime())
+        .content(request.getContent())
+        .build();
 
-      diveLogRepository.save(diveLog);
-    } catch(Exception e){
-      throw new Exception("로그 저장 중 오류 발생: " + e.getMessage(), e);
-    }
+    diveLogRepository.save(diveLog);
   }
 
   public Page<DiveLog> getDiveLogList(String userId, Pageable pageable) {
@@ -48,25 +44,21 @@ public class DiveLogService {
         .orElseThrow(() -> new IllegalArgumentException("권한이 없거나 존재하지 않는 로그입니다."));
   }
 
-  public void modifyDiveLog(DiveLogRequest request, Long id, String userId) throws Exception{
+  public void modifyDiveLog(DiveLogRequest request, Long id, String userId){
     DiveLog existing = diveLogRepository.findById(id)
         .filter(diveLog -> diveLog.getUserId().equals(userId))
         .orElseThrow(() -> new IllegalArgumentException("권한이 없거나 존재하지 않는 로그입니다."));
-    try{
-      existing.setDate(request.getDate());
-      existing.setTime(request.getTime());
-      existing.setLocation(request.getLocation());
-      existing.setSuit(request.getSuit());
-      existing.setWeight(request.getWeight());
-      existing.setFim(request.getFim());
-      existing.setCwt(request.getCwt());
-      existing.setDyn(request.getDyn());
-      existing.setLongestDivingTime(request.getLongestDivingTime());
-      existing.setContent(request.getContent());
-      diveLogRepository.save(existing);
-    }catch(Exception e){
-      throw new Exception("로그 수정 중 오류 발생: " + e.getMessage(), e);
-    }
+    existing.setDate(request.getDate());
+    existing.setTime(request.getTime());
+    existing.setLocation(request.getLocation());
+    existing.setSuit(request.getSuit());
+    existing.setWeight(request.getWeight());
+    existing.setFim(request.getFim());
+    existing.setCwt(request.getCwt());
+    existing.setDyn(request.getDyn());
+    existing.setLongestDivingTime(request.getLongestDivingTime());
+    existing.setContent(request.getContent());
+    diveLogRepository.save(existing);
   }
 
   public DiveLog getDiveLogByAdmin(Long id) {

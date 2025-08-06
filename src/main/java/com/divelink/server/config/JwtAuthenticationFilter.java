@@ -11,6 +11,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -24,7 +26,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
-
     String token = getJwtFromRequest(request);
 
     if (token != null) {
@@ -32,12 +33,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     try{
-
-
       if (token != null && jwtTokenProvider.validateToken(token)) {
         String userId = jwtTokenProvider.getUserIdFromToken(token);
         String userRole = jwtTokenProvider.getUserRoleFromToken(token);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, null);
+
+        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(userRole));
+        log.info("Authorities: {}", authorities);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         //UserContext 설정
