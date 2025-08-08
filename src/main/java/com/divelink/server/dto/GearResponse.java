@@ -1,9 +1,11 @@
 package com.divelink.server.dto;
 
 import com.divelink.server.domain.Gear;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
+@AllArgsConstructor
 public class GearResponse {
   private Long id;
   private String name;

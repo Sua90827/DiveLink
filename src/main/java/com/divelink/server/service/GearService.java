@@ -10,6 +10,7 @@ import com.divelink.server.dto.GearSetWithGearListResponse;
 import com.divelink.server.repository.GearRepository;
 import com.divelink.server.repository.GearSetMappingRepository;
 import com.divelink.server.repository.GearSetRepository;
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,4 +72,18 @@ public class GearService {
         })
         .toList();
   }
+
+  public GearSetWithGearListResponse getGears(Long gearSetId) {
+    List<GearResponse> gears = gearSetMappingRepository.findAllByGearSetId(gearSetId).stream()
+        .map(GearSetMapping::getGear)
+        .map(gear -> new GearResponse(gear.getId(), gear.getName(), gear.getPrice(), gear.getQuantity()))
+        .toList();
+
+    return new GearSetWithGearListResponse(gearSetId, gears);
+  }
+
+//  public Map<String, Integer> getRentalInfoByUserId(String userId, Long practiceNoticeId) {
+//
+//  }
+
 }
