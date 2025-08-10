@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,10 +90,10 @@ public class PracticeNoticeService {
     PracticeNotice practiceNotice = practiceNoticeRepository.findByIdForUpdate(request.getPracticeNoticeId())
         .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 공지글"));
 
-    List<Long> requestedGearIds = request.getGearIds();
+    Set<Long> requestedGearIds = request.getGearIds();
 
     //장비를 대여하지 않는 신청일 경우
-    if(requestedGearIds == null && requestedGearIds.isEmpty()){
+    if(requestedGearIds == null || requestedGearIds.isEmpty()){
       PracticeApplication application = PracticeApplication.builder()
           .userId(userId)
           .practiceNotice(practiceNotice)
@@ -105,11 +106,7 @@ public class PracticeNoticeService {
       return;
     }
 
-    Set<Long> unique = new LinkedHashSet<>(requestedGearIds);
-    if (unique.size() != requestedGearIds.size()) {
-      throw new IllegalArgumentException("장비 중복 선택 불가 (중복 gearId)");
-    }
-    List<Long> ids = new ArrayList<>(unique);
+    List<Long> ids = new ArrayList<>(requestedGearIds);
 
     // 2) 집계 한 번으로 capacity/used/price 가져오기
     List<GearCapacityRow> rows = gearRepository.checkCapacityForNotice(practiceNotice.getId(), ids);
@@ -159,23 +156,45 @@ public class PracticeNoticeService {
 //      throw new EntityNotFoundException("신청 내역이 없거나 이미 삭제됨");
 //    }//DELETE 로직
 
-    PracticeApplication app = practiceApplicationRepository.findById(applicationId)
+//    PracticeApplication app = practiceApplicationRepository.findById(applicationId)
+//        .orElseThrow(() -> new EntityNotFoundException("신청 내역 없음"));
+//    if (!userId.equals(app.getUserId())) {
+//      throw new IllegalArgumentException("본인 신청만 취소할 수 있습니다.");
+//    }//기존 로직
+
+    // 1) 신청 → 공지 ID 추출
+    Long noticeId = practiceApplicationRepository.findNoticeIdByApplicationId(applicationId)
         .orElseThrow(() -> new EntityNotFoundException("신청 내역 없음"));
-    if (!userId.equals(app.getUserId())) {
-      throw new IllegalArgumentException("본인 신청만 취소할 수 있습니다.");
-    }
+
+    // 2) 공지 행 락 (쓰기만 락)
+    practiceNoticeRepository.findByIdForUpdate(noticeId)
+        .orElseThrow(() -> new EntityNotFoundException("공지 없음"));
+
+    // 3) 본인 신청 검증 + 상태 변경
+    PracticeApplication app = practiceApplicationRepository.findByIdAndUserId(applicationId, userId)
+        .orElseThrow(() -> new AccessDeniedException("본인 신청만 취소할 수 있습니다."));
+
     if(app.getStatus() == Status.PAYMENT_CONFIRMED) throw new RuntimeException("확정 이후 취소 불가");
     app.setStatus(Status.CANCELLED);
   }
 
+  private static boolean counted(Status s) {
+    return s == Status.PAYMENT_PENDING
+        || s == Status.CONFIRM_REQUESTED
+        || s == Status.PAYMENT_CONFIRMED;
+  }
   @Transactional
-  public void changeStatus(Long applicationId, int statusCode) {
-    PracticeApplication application = practiceApplicationRepository.findById(applicationId)
+  public void changeStatus(Long applicationId, PracticeApplication.Status status) {
+    PracticeApplication application = practiceApplicationRepository.findWithNoticeById(applicationId)
         .orElseThrow(()-> new EntityNotFoundException("유효하지 않는 신청"));
     if(application.getStatus() == Status.PAYMENT_CONFIRMED){
       throw new IllegalArgumentException("확정 후 변경 불가");
     }
-    PracticeApplication.Status status = PracticeApplication.Status.fromCode(statusCode);
+    // 집계 영향 전이이면 락 (혹은 항상 락)
+    if (counted(application.getStatus()) || counted(status)) {
+      practiceNoticeRepository.findByIdForUpdate(application.getPracticeNotice().getId())
+          .orElseThrow(() -> new EntityNotFoundException("공지 없음"));
+    }
     application.setStatus(status);
   }
 }

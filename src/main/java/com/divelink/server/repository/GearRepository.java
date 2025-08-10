@@ -10,24 +10,19 @@ import org.springframework.data.repository.query.Param;
 public interface GearRepository  extends JpaRepository<Gear, Long> {
 
   @Query(value = """
-SELECT 
+SELECT
   g.id AS gearId,
   g.quantity AS capacity,
   g.price AS price,
-  COALESCE(SUM(
-    CASE 
-      WHEN pa.id IS NOT NULL 
-       AND FIND_IN_SET(
-                   CAST(g.id AS CHAR),
-                   REPLACE(REPLACE(REPLACE(pa.gear_ids, '[',''),']',''), '"','')
-                 ) > 0
-      THEN 1 ELSE 0 
-    END
-  ), 0) AS used
+  COALESCE(COUNT(pa.id), 0) AS used
 FROM gear g
 LEFT JOIN practice_application pa
   ON pa.practice_notice_id = :noticeId
  AND pa.status IN ('PAYMENT_PENDING','CONFIRM_REQUESTED','PAYMENT_CONFIRMED')
+ AND FIND_IN_SET(
+       CAST(g.id AS CHAR),
+       REPLACE(REPLACE(REPLACE(IFNULL(pa.gear_ids, ''), '[',''),']',''), '"','')
+     ) > 0
 WHERE g.id IN (:gearIds)
 GROUP BY g.id, g.quantity, g.price
 """, nativeQuery = true)

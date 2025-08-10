@@ -1,5 +1,8 @@
 package com.divelink.server.controller;
 
+import static com.divelink.server.domain.PracticeApplication.Status.CANCELLED;
+import static com.divelink.server.domain.PracticeApplication.Status.PAYMENT_CONFIRMED;
+import static com.divelink.server.domain.PracticeApplication.Status.REJECTED;
 import static org.springframework.data.domain.Sort.Direction.DESC;
 
 import com.divelink.server.context.UserContext;
@@ -14,6 +17,7 @@ import com.divelink.server.dto.PracticeNoticeRequest;
 import com.divelink.server.dto.PracticeNoticeResponse;
 import com.divelink.server.service.GearService;
 import com.divelink.server.service.PracticeNoticeService;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +65,7 @@ public class PracticeNoticeController {
 
   //관리자 연습글 수정
   @PreAuthorize("hasRole('ADMIN')")
-  @PutMapping("/notice/modify/{id}")
+  @PutMapping("/notice/{id}")
   public ResponseEntity<String> modifyPracticeNotice(@PathVariable Long id, @RequestBody PracticeNoticeRequest request){
     practiceNoticeService.modifyPracticeNotice(id, request);
     return ResponseEntity.ok("수정 완료");
@@ -69,7 +73,7 @@ public class PracticeNoticeController {
 
   //관리자 연습글 삭제
   @PreAuthorize("hasRole('ADMIN')")
-  @DeleteMapping("notice/delete/{id}")
+  @DeleteMapping("notice/{id}")
   public ResponseEntity<String> deletePracticeNotice(@PathVariable Long id){
     practiceNoticeService.deletePracticeNotice(id);
     return ResponseEntity.ok("삭제 완료");
@@ -112,10 +116,10 @@ public class PracticeNoticeController {
 
   //사용자 입금 상태 변경 (1, 2, 3)
   @PutMapping("/application/status")
-  public ResponseEntity<String> userChangeStatus(@RequestParam Long applicationId, @RequestParam int status){
-    if(status == 4 || status == 6){
+  public ResponseEntity<String> userChangeStatus(@RequestParam Long applicationId, @RequestParam PracticeApplication.Status status){
+    if(EnumSet.of(PAYMENT_CONFIRMED, REJECTED).contains(status)){
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    } else if (status == 5) {
+    } else if (status == CANCELLED) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("/practice/application path api를 이용하세요.");
     }
     practiceNoticeService.changeStatus(applicationId, status);
@@ -125,9 +129,9 @@ public class PracticeNoticeController {
   //관리자 입금 상태 변경 (4, 6)
   @PreAuthorize("hasRole('ADMIN')")
   @PutMapping("/admin/application/status")
-  public ResponseEntity<String> adminChangeStatus(@RequestParam Long applicationId, @RequestParam int status){
-    if(status == 1 || status == 2 || status == 3 || status == 5){
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+  public ResponseEntity<String> adminChangeStatus(@RequestParam Long applicationId, @RequestParam PracticeApplication.Status status){
+    if (!EnumSet.of(PAYMENT_CONFIRMED, REJECTED).contains(status)) {
+      throw new IllegalArgumentException("허용되지 않은 변경값");
     }
     practiceNoticeService.changeStatus(applicationId, status);
     return ResponseEntity.ok("상태 변경 완료");
