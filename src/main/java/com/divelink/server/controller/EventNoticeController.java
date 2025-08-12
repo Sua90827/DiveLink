@@ -3,7 +3,9 @@ package com.divelink.server.controller;
 import static org.springframework.data.domain.Sort.Direction.DESC;
 
 import com.divelink.server.context.UserContext;
+import com.divelink.server.domain.EventApplication.EventApplicationStatus;
 import com.divelink.server.domain.EventNotice;
+import com.divelink.server.dto.EventApplicationResponse;
 import com.divelink.server.dto.EventNoticeRequest;
 import com.divelink.server.dto.EventNoticeResponse;
 import com.divelink.server.service.EventNoticeService;
@@ -55,6 +57,25 @@ public class EventNoticeController {
     return ResponseEntity.ok("삭제 완료");
   }
 
-  
+  //현재 로그인 사용자의 이벤트 신청
+  @PreAuthorize("isAuthenticated()")
+  @PostMapping("/{id}/apply")
+  public ResponseEntity<String> apply(@PathVariable Long id) {
+    Long appId = eventNoticeService.apply(id, UserContext.getUserId());
+    return ResponseEntity.ok("신청 완료 applicationId : " + appId);
+  }
 
+  //관리자용 신청자 목록
+  @PreAuthorize("hasRole('ADMIN')")
+  @GetMapping("/{id}/applications")
+  public ResponseEntity<Page<EventApplicationResponse>> applications(@PathVariable Long id, @PageableDefault(size = 10, sort = "createdAt", direction = DESC) Pageable pageable) {
+    return ResponseEntity.ok(eventNoticeService.getApplications(id, pageable));
+  }
+
+  @PreAuthorize("isAuthenticated()")
+  @DeleteMapping("/{id}/apply")
+  public ResponseEntity<String> cancel(@PathVariable Long id) {
+    eventNoticeService.cancel(id, UserContext.getUserId());
+    return ResponseEntity.ok("신청 취소 완료");
+  }
 }
