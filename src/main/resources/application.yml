@@ -23,9 +23,28 @@ spring:
     user:
       enabled: false  # 기본 사용자 인증 비활성화
 
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+storage:
+  type: local   # local | s3  (운영에서는 s3)
+  url-ttl-seconds: 1800
+  local:
+    base-path: ./uploads           # 실제 파일 저장 디렉터리
+    public-base-url: http://localhost:8080/files  # 정적 서빙 URL prefix
+  s3:
+    bucket: your-bucket-name
+    region: ap-northeast-2
+    # 자격 증명은 환경변수나 IAM Role 권장 (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)
+
 #  jwt:
 #    expiration_time: 86400000 #1일
 #    secret:
 
 server:
   port: 8080
+  tomcat:
+    max-http-form-post-size: 100MB   # 기본 2MB
+    max-swallow-size: -1

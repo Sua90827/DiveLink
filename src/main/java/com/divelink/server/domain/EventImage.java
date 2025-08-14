@@ -43,13 +43,9 @@ public class EventImage {
   private String storageKey;
 
   private String originalFilename;
-
   private String contentType;
-
   private Long sizeBytes;
-
   private Integer width;
-
   private Integer height;
 
   @Column(nullable = false)
