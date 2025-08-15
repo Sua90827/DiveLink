@@ -1,7 +1,6 @@
 package com.divelink.server.repository;
 
 import com.divelink.server.domain.EventApplication;
-import com.divelink.server.domain.EventApplication.EventApplicationStatus;
 import com.divelink.server.domain.EventNotice;
 import com.divelink.server.domain.User;
 import java.util.Optional;
@@ -13,6 +12,4 @@ public interface EventApplicationRepository extends JpaRepository<EventApplicati
   Optional<EventApplication> findByUserAndEventNotice(User user, EventNotice eventNotice);
 
   Page<EventApplication> findByEventNotice(EventNotice eventNotice, Pageable pageable);
-
-  long countByEventNoticeAndStatus(EventNotice eventNotice, EventApplicationStatus status);
 }

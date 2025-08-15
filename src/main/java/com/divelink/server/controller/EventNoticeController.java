@@ -3,8 +3,6 @@ package com.divelink.server.controller;
 import static org.springframework.data.domain.Sort.Direction.DESC;
 
 import com.divelink.server.context.UserContext;
-import com.divelink.server.domain.EventApplication.EventApplicationStatus;
-import com.divelink.server.domain.EventNotice;
 import com.divelink.server.dto.EventApplicationResponse;
 import com.divelink.server.dto.EventNoticeRequest;
 import com.divelink.server.dto.EventNoticeResponse;
@@ -28,7 +26,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -50,7 +47,7 @@ public class EventNoticeController {
   public static class EventCreateForm {
     private String title;
     private String content;
-    private Integer coverIndex = 0;
+    private Integer coverIndex = 0; //최종 리스트 기준 0-based (선택)
   }
   // EventNoticeController 내
   @PreAuthorize("hasRole('ADMIN')")
@@ -78,11 +75,39 @@ public class EventNoticeController {
     Page<EventNoticeResponse> eventNotices = eventNoticeService.eventNoticeList(pageable);
     return ResponseEntity.ok(eventNotices);
   }
+
   @PreAuthorize("hasRole('ADMIN')")
   @PutMapping("/{id}")
   public ResponseEntity<String> update(@PathVariable Long id, @RequestBody EventNoticeRequest request) {
     eventNoticeService.update(id, request);
     return ResponseEntity.ok("수정 성공 id : " + id);
+  }
+
+  // 이미지 포함 수정용 폼
+  @Getter @Setter
+  public static class EventUpdateForm {
+    private String title;
+    private String content;
+    private Boolean replace = false; //true면 기존 이미지 전부 삭제 후 새로 업로드
+    private Integer coverIndex; //최종 리스트 기준 0-based (선택)
+  }
+
+  @PreAuthorize("hasRole('ADMIN')")
+  @PutMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<String> updateWithImages(
+      @PathVariable Long id,
+      @ModelAttribute EventUpdateForm form,
+      @RequestParam(value = "files", required = false) List<MultipartFile> files
+  ) {
+    eventNoticeService.updateWithImages(
+        id,
+        form.getTitle(),
+        form.getContent(),
+        Boolean.TRUE.equals(form.getReplace()),
+        files,
+        form.getCoverIndex()
+    );
+    return ResponseEntity.ok("수정(이미지 포함) 성공 id : " + id);
   }
 
   @PreAuthorize("hasRole('ADMIN')")

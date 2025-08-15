@@ -55,5 +55,4 @@ public class EventApplication {
     ATTENDING,
     CANCELLED
   }
-
 }
