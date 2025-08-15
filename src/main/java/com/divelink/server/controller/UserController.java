@@ -55,7 +55,7 @@ public class UserController {
   }
 
   @GetMapping("/session")
-  private ResponseEntity<String> checkSession(HttpSession session){
+  public ResponseEntity<String> checkSession(HttpSession session){
     String userId = (String) session.getAttribute(USER_ID);
     String role = (String) session.getAttribute(USER_ROLE);
     if(userId != null){
