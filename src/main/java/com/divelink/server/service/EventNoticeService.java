@@ -42,6 +42,7 @@ public class EventNoticeService {
   private final UserRepository userRepository;
   private final EventImageRepository eventImageRepository;
   private final FileStorage storage;
+  private final ImageService imageService;
 
   @Transactional
   public Long create(String userId, EventNoticeRequest request) {
@@ -58,8 +59,7 @@ public class EventNoticeService {
   }
 
   @Transactional
-  public Long createWithImages(String userId, String title, String content,
-      List<MultipartFile> files, Integer coverIndex) {
+  public Long createWithImages(String userId, String title, String content, List<MultipartFile> files, Integer coverIndex) {
 
     User user = userRepository.findByUserId(userId)
         .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 회원"));
@@ -71,58 +71,11 @@ public class EventNoticeService {
         .createdAt(LocalDateTime.now())
         .build());
 
-    if (files == null || files.isEmpty()) {
-      return event.getId();
+    if (files != null && !files.isEmpty()) {
+      imageService.addImages(event, files, 0);
+      var finalList = eventImageRepository.findByEventNoticeOrderBySortOrderAscIdAsc(event);
+      imageService.applyOrderAndCover(finalList, (coverIndex == null) ? 0 : coverIndex);
     }
-
-    int coverIdx = (coverIndex == null) ? 0 : Math.max(0, Math.min(coverIndex, files.size() - 1));
-    String keyPrefix = "uploads/events/" + event.getId();
-
-    for (int i = 0; i < files.size(); i++) {
-      MultipartFile file = files.get(i);
-
-      final byte[] bytes;
-      try {
-        bytes = file.getBytes();
-      } catch (IOException e) {
-        throw new UncheckedIOException("업로드 파일 읽기 실패: " + file.getOriginalFilename(), e);
-      }
-      if (bytes.length == 0) {
-        continue;
-      }
-
-      //저장소에 업로드 (ByteArrayInputStream으로 전달)
-      FileStorage.UploadResult result = storage.upload(
-          new ByteArrayInputStream(bytes),
-          bytes.length,
-          file.getContentType(),
-          keyPrefix
-      );
-
-      //이미지 크기 추출
-      Integer width = null, height = null;
-      try (var bis = new ByteArrayInputStream(bytes)) {
-        var img = ImageIO.read(bis); // IOException 가능
-        if (img != null) { width = img.getWidth(); height = img.getHeight(); }
-      } catch (IOException e) {
-        log.warn("ImageIO.read 실패: {} (무시하고 진행)", file.getOriginalFilename(), e);
-      }
-
-      EventImage image = EventImage.builder()
-          .eventNotice(event)
-          .storageKey(result.key())
-          .originalFilename(file.getOriginalFilename())
-          .contentType(file.getContentType())
-          .sizeBytes((long) bytes.length)
-          .width(width)
-          .height(height)
-          .sortOrder(i)
-          .cover(i == coverIdx)
-          .build();
-
-      eventImageRepository.save(image);
-    }
-
     return event.getId();
   }
 
@@ -143,13 +96,7 @@ public class EventNoticeService {
   }
 
   @Transactional
-  public void updateWithImages(Long eventId,
-      String title,
-      String content,
-      boolean replace,
-      List<MultipartFile> files,
-      Integer coverIndex) {
-
+  public void updateWithImages(Long eventId, String title, String content, boolean replace, List<MultipartFile> files, Integer coverIndex) {
     EventNotice e = eventNoticeRepository.findById(eventId)
         .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 공지"));
 
@@ -161,75 +108,17 @@ public class EventNoticeService {
         .findByEventNoticeOrderBySortOrderAscIdAsc(e);
 
     //replace=true -> 기존 이미지 전부 삭제(+스토리지에서 삭제)
-    if (replace && !current.isEmpty()) {
-      current.forEach(img -> storage.delete(img.getStorageKey()));
-      eventImageRepository.deleteAll(current);
-      current.clear();
+    if (replace) {
+      imageService.deleteAllForEvent(e);
+      current = new ArrayList<>();
     }
 
-    //새 파일 업로드(있을 경우)
-    List<EventImage> added = new ArrayList<>();
     if (files != null && !files.isEmpty()) {
-      String keyPrefix = "uploads/events/" + e.getId();
-      for (int i = 0; i < files.size(); i++) {
-        MultipartFile f = files.get(i);
-        byte[] bytes;
-        try {
-          bytes = f.getBytes();
-        } catch (IOException ex) {
-          throw new UncheckedIOException("업로드 파일 읽기 실패: " + f.getOriginalFilename(), ex);
-        }
-        if (bytes.length == 0) continue;
-
-        //저장소 업로드
-        var result = storage.upload(new ByteArrayInputStream(bytes), bytes.length, f.getContentType(), keyPrefix);
-
-        //이미지 크기 추출(선택)
-        Integer w = null, h = null;
-        try (var bis = new ByteArrayInputStream(bytes)) {
-          var img = ImageIO.read(bis);
-          if (img != null) { w = img.getWidth(); h = img.getHeight(); }
-        } catch (IOException ignore) {}
-
-        var saved = eventImageRepository.save(EventImage.builder()
-            .eventNotice(e)
-            .storageKey(result.key())
-            .originalFilename(f.getOriginalFilename())
-            .contentType(f.getContentType())
-            .sizeBytes((long) bytes.length)
-            .width(w)
-            .height(h)
-            .sortOrder(0) // 일단 0으로, 아래에서 일괄 재정렬
-            .cover(false)
-            .build());
-        added.add(saved);
-      }
+      var added = imageService.addImages(e, files, current.size());
+      current.addAll(added);
     }
 
-    //최종 리스트 = (replace면 added만) / (아니면 기존 + added)
-    List<EventImage> finalList = new ArrayList<>();
-    finalList.addAll(current);
-    finalList.addAll(added);
-
-    //정렬/커버 재설정
-    for (int i = 0; i < finalList.size(); i++) {
-      finalList.get(i).setSortOrder(i);
-      finalList.get(i).setCover(false);
-    }
-    if (coverIndex != null && coverIndex >= 0 && coverIndex < finalList.size()) {
-      finalList.get(coverIndex).setCover(true);
-    } else {
-      //기존 커버 유지 로직 (replace=false이고 기존에 커버가 있었다면 유지)
-      int prevCoverIdx = -1;
-      for (int i = 0; i < current.size(); i++) {
-        if (current.get(i).isCover()) { prevCoverIdx = i; break; }
-      }
-      if (prevCoverIdx >= 0 && prevCoverIdx < finalList.size()) {
-        finalList.get(prevCoverIdx).setCover(true);
-      } else if (!finalList.isEmpty()) {
-        finalList.get(0).setCover(true); // 아무것도 없으면 첫 번째를 커버로
-      }
-    }
+    imageService.applyOrderAndCover(current, coverIndex); // coverIndex null이면 첫 번째가 커버
   }
 
   @Transactional
@@ -245,7 +134,11 @@ public class EventNoticeService {
     }
 
     for (EventImage img : event.getImages()) {
-      try { storage.delete(img.getStorageKey()); } catch (Exception ignored) {}
+      try {
+        storage.delete(img.getStorageKey());
+      } catch (Exception ex) {
+        log.warn("스토리지 사진 삭제 실패 : eventId = {}, imageId = {}, key = {}", id, img.getId(), img.getStorageKey(), ex);
+      }
     }
     eventNoticeRepository.delete(event);
   }

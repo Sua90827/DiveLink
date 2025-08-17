@@ -11,6 +11,8 @@ import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.flogger.Flogger;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @RestController
 @RequestMapping("/event")
 @RequiredArgsConstructor
@@ -56,13 +59,19 @@ public class EventNoticeController {
       @ModelAttribute EventCreateForm form,
       @RequestParam(value = "files", required = false) List<MultipartFile> files
   ) {
-    int count = (files == null) ? 0 : files.size();
-    Long totalSize = (files == null) ? 0L :
-        files.stream().mapToLong(MultipartFile::getSize).sum();
-    System.out.println("[CTRL] files.size=" + count + ", sumSize=" + totalSize +
-        (count>0 ? ", firstSize=" + files.get(0).getSize() +
-            ", firstName=" + files.get(0).getOriginalFilename() +
-            ", firstCT=" + files.get(0).getContentType() : ""));
+    List<MultipartFile> safeFiles = (files == null) ? List.of() : files;
+
+    int count = safeFiles.size();
+    long totalSize = safeFiles.stream().mapToLong(MultipartFile::getSize).sum();
+
+    if (count == 0) {
+      log.info("[CTRL] files.size=0");
+    } else {
+      MultipartFile first = safeFiles.get(0);
+      log.info("[CTRL] files.size={}, sumSize={}, firstSize={}, firstName={}, firstCT={}",
+          count, totalSize, first.getSize(), first.getOriginalFilename(), first.getContentType());
+    }
+
     Long id = eventNoticeService.createWithImages(
         UserContext.getUserId(), form.getTitle(), form.getContent(), files, form.getCoverIndex()
     );
