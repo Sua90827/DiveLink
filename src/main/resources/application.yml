@@ -38,12 +38,9 @@ storage:
     bucket: divelink-uploads
     region: ap-northeast-2
 
-#  jwt:
-#    expiration_time: 86400000 #1일
-#    secret:
 
 server:
-  port: 8080
+  port: ${PORT:8080}
   tomcat:
     max-http-form-post-size: 100MB   # 기본 2MB
     max-swallow-size: -1
